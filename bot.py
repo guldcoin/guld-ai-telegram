@@ -11,7 +11,7 @@ from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, Document)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
 # from telegram.ext.dispatcher import run_async
-from guldledger import *
+from guldlib import *
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -27,19 +27,54 @@ UPLOADPGPKEY, SIGNTX, WELCOME, CANCEL = range(4)
 
 
 def start(bot, update):
-    update.message.reply_text(
-        'Hi! My name is Gai, a guld-ai. I can help you with your guld related data and requests. I always respond from the perspective of guld founder, isysd.\n\n'
-        'Commands:\n\n'
-        '  /price <asset>\n'
-        '  /balance <account> [value_in]\n'
-        '  /asl <account> [value_in]\n'
-        '  /txgen <type> [args*]\n'
-        '    /txgen register individual <name>\n'  # TODO group or device
-        '    /txgen transfer <from> <to> <amount> [commodity]\n'
-        '    /txgen grant <contributor> <amount> [commodity]\n'
-        '  /txsub [signed_tx]\n'
-        '  /apply <username> <pgp-rsa-2048+pub-key>\n'  # TODO group or device
-    )
+    en = (
+            'Hi! My name is Gai, a guld-ai. I can help you with your guld related data and requests. I always respond from the perspective of guld founder, isysd.\n\n'
+            'Commands:\n\n'
+            '/price <unit>\n'
+            '    - Price of a unit\n'
+            '/bal <account> [unit]\n'
+            '    - Account balance with optional unit\n'
+            '/asl <account> [unit]\n'
+            '    - Only assets & liabiliteis optional unit of account\n'
+            '/addr <asset> <username>\n'  # TODO group or device
+            '    - Get address from me. Deposits converted to GULD at market rate. (max 50)\n'
+            '/register individual <name>\n'  # TODO group or device
+            '    - Register as an individual.\n'
+            '/send <from> <to> <amount> [commodity]\n'
+            '    - Transfer to another account. Default unit is GULD.\n'
+            '/grant <contributor> <amount> [commodity]\n'
+            '    - Grant for contributors. Default unit is GULD.\n'
+            '/sub <igned_tx>\n'
+            '    - Submit a signed transaction\n'
+            '/apply <username> <pgp-pub-key>\n'  # TODO group or device
+            '    - Apply for an account with a username and PGP key (RSA 2048+ bit)\n'
+        )
+    es = (
+            '¡Hola! Mi nombre es Gai, un guld-ai. Puedo ayudarte con tus datos y solicitudes relacionadas con guld. Siempre respondo desde la perspectiva del fundador de guld, isysd. \n\n'
+            'Comandos: \n\n'
+            '/price <unidad> \n'
+            '    - Precio de un unidad \n'
+            '/bal <cuenta> [unidad] \n'
+            '    - Saldo de cuenta con unidad opcional \n'
+            '/asl <cuenta> [unidad] \n'
+            '    - Solo activos y pasivos es unidad opcional \n'
+            '/addr <activo> <nombre> \n' # TODO grupo o dispositivo
+            '    - Obtener dirección de mí. Depósitos convertidos a GULD a tasa de mercado. (max 50) \n'
+            '/register individual <nombre> \n' # TODO grupo o dispositivo
+            '    - Registrarse como individuo. \n'
+            '/send <desde> <a> <cantidad> [unidad] \n'
+            '    - Transferir a otra cuenta. La unidad predeterminada es GULD. \n'
+            '/grant <contribuidor> <cantidad> [unidad] \n'
+            '    - Grant para contribuyentes. La unidad predeterminada es GULD. \n'
+            '/sub <igned_tx> \n'
+            '    - Enviar una transacción firmada \n'
+            '/apply <username> <pgp-pub-key> \n' # TODO grupo o dispositivo
+            '    - Solicite una cuenta con un nombre de usuario y clave PGP (RSA 2048+ bit) \n'
+        )
+    if ' es' in update.message.text:
+        update.message.reply_text(es)
+    else:
+        update.message.reply_text(en)
     return
 
 
@@ -85,45 +120,50 @@ def balance(bot, update, args):
     return
 
 
-def txgen(bot, update, args):
-    tguser = update.message.from_user
-    txtype = args[0]
+def register(bot, update, args):
     dt, tstamp = get_time_date_stamp()
     fname = '%s.dat' % tstamp
-    if txtype in ['reg', 'register']:
-        utype = args[1]
-        message = gen_register_individual(args[2], dt, tstamp)
-        update.message.reply_document(document=BytesIO(str.encode(message)),
-            filename=fname,
-            caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
-        )
-        bot.send_message(chat_id=update.message.chat_id, text=message)
-    elif txtype in ['send', 'transfer']:
-        if len(args) > 4:
-            commodity = args[4]
-        else:
-            commodity = 'GULD'
-        message = gen_transfer(args[1], args[2], args[3], commodity, dt, tstamp)
-        update.message.reply_document(document=BytesIO(str.encode(message)),
-            filename=fname,
-            caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
-        )
-        bot.send_message(chat_id=update.message.chat_id, text=message)
-    elif txtype in ['grant', 'issue']:
-        amount = args[2]
-        if len(args) > 3:
-            commodity = args[3]
-        else:
-            commodity = 'GULD'
+    utype = args[0]
+    message = gen_register_individual(args[1], dt, tstamp)
+    update.message.reply_document(document=BytesIO(str.encode(message)),
+        filename=fname,
+        caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
+    )
+    bot.send_message(chat_id=update.message.chat_id, text=message)
+    return
 
-        message = gen_grant(args[1], args[2], commodity, dt, tstamp)
-        update.message.reply_document(document=BytesIO(str.encode(message)),
-            filename=fname,
-            caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
-        )
-        bot.send_message(chat_id=update.message.chat_id, text=message)
+
+def transfer(bot, update, args):
+    dt, tstamp = get_time_date_stamp()
+    fname = '%s.dat' % tstamp
+    if len(args) > 3:
+        commodity = args[3]
     else:
-        update.message.reply_text('Unknown transaction type.')
+        commodity = 'GULD'
+    message = gen_transfer(args[0], args[1], args[2], commodity, dt, tstamp)
+    update.message.reply_document(document=BytesIO(str.encode(message)),
+        filename=fname,
+        caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
+    )
+    bot.send_message(chat_id=update.message.chat_id, text=message)
+    return
+
+
+def grant(bot, update, args):
+    dt, tstamp = get_time_date_stamp()
+    fname = '%s.dat' % tstamp
+    amount = args[1]
+    if len(args) > 2:
+        commodity = args[2]
+    else:
+        commodity = 'GULD'
+
+    message = gen_grant(args[0], args[1], commodity, dt, tstamp)
+    update.message.reply_document(document=BytesIO(str.encode(message)),
+        filename=fname,
+        caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
+    )
+    bot.send_message(chat_id=update.message.chat_id, text=message)
     return
 
 
@@ -194,6 +234,15 @@ def signed_tx(bot, update):
                 update.message.reply_text('Message already known.')
                 return
             elif txtype == 'transfer':
+                if not re.search(' *%s:Assets *%s %s*' % (name, amount, commodity), rawtx) or float(amount) >= 0:
+                    update.message.reply_text('Cannot sign for account that is not yours.')
+                    return
+                else:
+                    asl = get_assets_liabs(name)
+                    aslbal = asl.strip().split('\n')[-1].strip().split(' ')[0]
+                    if float(aslbal) + float(amount) < 0:
+                        update.message.reply_text('Cannot create transction that would result in negative net worth.')
+                        return
                 write_tx_files()
             elif txtype == 'register individual':
                 bal = get_guld_sub_bals(name)
@@ -202,10 +251,20 @@ def signed_tx(bot, update):
                 else:
                     write_tx_files()
             elif txtype == 'grant':
-                if (float(amount) < 10 and name in ['fdreyfus', 'isysd', 'cz', 'juankong', 'aldo'] or
+                if (float(amount) < 10 and name in ['fdreyfus', 'isysd', 'cz', 'juankong', 'goldchamp'] or
                     name in ['isysd', 'cz']):
                     write_tx_files()
+    return
 
+
+def get_addr(bot, update, args):
+    commodity = args[0]
+    if commodity not in ('BTC', 'DASH'):
+        update.message.reply_text('only BTC and DASH are supported at the moment')
+    else:
+        counterparty = args[1]
+        address = getAddresses(counterparty, 'isysd', commodity)[-1]
+        update.message.reply_text(address)
     return
 
 
@@ -220,11 +279,13 @@ def main():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", start))
     dp.add_handler(CommandHandler("price", price, pass_args=True))
-    dp.add_handler(CommandHandler("balance", balance, pass_args=True))
     dp.add_handler(CommandHandler("bal", balance, pass_args=True))
     dp.add_handler(CommandHandler("asl", assets_liabilites, pass_args=True))
-    dp.add_handler(CommandHandler("txgen", txgen, pass_args=True))
-    dp.add_handler(CommandHandler("txsub", signed_tx))
+    dp.add_handler(CommandHandler("register", register, pass_args=True))
+    dp.add_handler(CommandHandler("send", transfer, pass_args=True))
+    dp.add_handler(CommandHandler("grant", grant, pass_args=True))
+    dp.add_handler(CommandHandler("sub", signed_tx))
+    dp.add_handler(CommandHandler("addr", get_addr, pass_args=True))
     dp.add_handler(CommandHandler("apply", application, pass_args=True))
 
     # register_handler = ConversationHandler(
