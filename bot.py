@@ -1,5 +1,6 @@
-#!/usr/bin/env python
-__version__ = '0.0.1'
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+__version__ = '0.1.0'
 import configparser
 import json
 import logging
@@ -26,68 +27,67 @@ NAMECHARS = set(string.ascii_lowercase + string.digits + '-')
 UPLOADPGPKEY, SIGNTX, WELCOME, CANCEL = range(4)
 
 
-def start(bot, update):
+def halp(bot, update):
     en = (
-            'Hi! My name is Gai, a guld-ai. I can help you with your guld related data and requests. I always respond from the perspective of guld founder, isysd.\n\n'
-            'Commands:\n\n'
-            '/price <unit>\n'
-            '    - Price of a unit\n'
-            '/bal <account> [unit]\n'
-            '    - Account balance with optional unit\n'
-            '/asl <account> [unit]\n'
-            '    - Only assets & liabiliteis optional unit of account\n'
-            '/addr <asset> <username>\n'  # TODO group or device
-            '    - Get address from me. Deposits converted to GULD at market rate. (max 50)\n'
-            '/register individual <name>\n'  # TODO group or device
-            '    - Register as an individual.\n'
-            '/send <from> <to> <amount> [commodity]\n'
-            '    - Transfer to another account. Default unit is GULD.\n'
-            '/grant <contributor> <amount> [commodity]\n'
-            '    - Grant for contributors. Default unit is GULD.\n'
-            '/sub <igned_tx>\n'
-            '    - Submit a signed transaction\n'
-            '/apply <username> <pgp-pub-key>\n'  # TODO group or device
-            '    - Apply for an account with a username and PGP key (RSA 2048+ bit)\n'
+        'Hi! My name is Gai, a guld-ai. I can help you with your guld related data and requests. I always respond from the perspective of guld founder, isysd.\n\n'
+        'Commands:\n\n'
+        '/price [unit]\n'
+        '    - Price of a unit\n'
+        '/bal <account> [unit]\n'
+        '    - Account balance with optional unit\n'
+        '/addr <asset> <username>\n'  # TODO group or device
+        '    - Get address from me. Deposits converted to GULD at market rate. (max 50)\n'
+        '/register individual <name>\n'  # TODO group or device
+        '    - Register as an individual.\n'
+        '/send <from> <to> <amount> [commodity]\n'
+        '    - Transfer to another account. Default unit is GULD.\n'
+        '/grant <contributor> <amount> [commodity]\n'
+        '    - Grant for contributors. Default unit is GULD.\n'
+        '/sub <signed_tx>\n'
+        '    - Submit a signed transaction\n'
+        '/apply <username> <pgp-pub-key>\n'  # TODO group or device
+        '    - Apply for an account with a username and PGP key (RSA 2048+ bit)\n'
         )
-    es = (
-            '¡Hola! Mi nombre es Gai, un guld-ai. Puedo ayudarte con tus datos y solicitudes relacionadas con guld. Siempre respondo desde la perspectiva del fundador de guld, isysd. \n\n'
-            'Comandos: \n\n'
-            '/price <unidad> \n'
-            '    - Precio de un unidad \n'
-            '/bal <cuenta> [unidad] \n'
-            '    - Saldo de cuenta con unidad opcional \n'
-            '/asl <cuenta> [unidad] \n'
-            '    - Solo activos y pasivos es unidad opcional \n'
-            '/addr <activo> <nombre> \n' # TODO grupo o dispositivo
-            '    - Obtener dirección de mí. Depósitos convertidos a GULD a tasa de mercado. (max 50) \n'
-            '/register individual <nombre> \n' # TODO grupo o dispositivo
-            '    - Registrarse como individuo. \n'
-            '/send <desde> <a> <cantidad> [unidad] \n'
-            '    - Transferir a otra cuenta. La unidad predeterminada es GULD. \n'
-            '/grant <contribuidor> <cantidad> [unidad] \n'
-            '    - Grant para contribuyentes. La unidad predeterminada es GULD. \n'
-            '/sub <igned_tx> \n'
-            '    - Enviar una transacción firmada \n'
-            '/apply <username> <pgp-pub-key> \n' # TODO grupo o dispositivo
-            '    - Solicite una cuenta con un nombre de usuario y clave PGP (RSA 2048+ bit) \n'
-        )
-    if ' es' in update.message.text:
-        update.message.reply_text(es)
-    else:
-        update.message.reply_text(en)
+    update.message.reply_text(en)
     return
+
+
+def ayuda(bot, update):
+    es = (
+        '¡Hola! Mi nombre es Gai, un guld-ai. Puedo ayudarte con tus datos y solicitudes relacionadas con guld. Siempre respondo desde la perspectiva del fundador de guld, isysd. \n\n'
+        'Comandos: \n\n'
+        '/precio [unidad] \n'
+        '    - Precio de un unidad \n'
+        '/bal <cuenta> [unidad] \n'
+        '    - Saldo de cuenta con unidad opcional \n'
+        '/dir <activo> <nombre> \n' # TODO grupo o dispositivo
+        '    - Obtener dirección de mí. Depósitos convertidos a GULD a tasa de mercado. (max 50) \n'
+        '/registro individual <nombre> \n' # TODO grupo o dispositivo
+        '    - Registrarse como individuo. \n'
+        '/env <desde> <a> <cantidad> [unidad] \n'
+        '    - Transferir a otra cuenta. La unidad predeterminada es GULD. \n'
+        '/grant <contribuidor> <cantidad> [unidad] \n'
+        '    - Grant para contribuyentes. La unidad predeterminada es GULD. \n'
+        '/ent <signed_tx> \n'
+        '    - Enviar una transacción firmada \n'
+        '/aplica <username> <pgp-pub-key> \n' # TODO grupo o dispositivo
+        '    - Solicite una cuenta con un nombre de usuario y clave PGP (RSA 2048+ bit) \n'
+        '/ayuda\n' # TODO grupo o dispositivo
+        '    - Documentación de ayuda detallada en un mensaje.\n'
+        )
+    update.message.reply_text(es)
 
 
 def price(bot, update, args):
     # user = update.message.from_user
     if len(args) == 0:
-        update.message.reply_text('Invalid commodity. Options are: %s' % ", ".join(COMMODITIES))
+        commodity = 'GULD'
     else:
         commodity = str(args[0]).upper()
-        if commodity not in COMMODITIES:
-            update.message.reply_text('Invalid commodity. Options are: %s' % ", ".join(COMMODITIES))
-        else:
-            update.message.reply_text("%s = $%s" % (commodity, get_price(commodity)))
+    if commodity not in COMMODITIES:
+        update.message.reply_text('Invalid commodity. Options are: %s' % ", ".join(COMMODITIES))
+    else:
+        update.message.reply_text("%s = $%s" % (commodity, get_price(commodity)))
     return
 
 
@@ -127,7 +127,7 @@ def register(bot, update, args):
     message = gen_register_individual(args[1], dt, tstamp)
     update.message.reply_document(document=BytesIO(str.encode(message)),
         filename=fname,
-        caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
+        caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
     )
     bot.send_message(chat_id=update.message.chat_id, text=message)
     return
@@ -143,7 +143,7 @@ def transfer(bot, update, args):
     message = gen_transfer(args[0], args[1], args[2], commodity, dt, tstamp)
     update.message.reply_document(document=BytesIO(str.encode(message)),
         filename=fname,
-        caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
+        caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
     )
     bot.send_message(chat_id=update.message.chat_id, text=message)
     return
@@ -161,7 +161,7 @@ def grant(bot, update, args):
     message = gen_grant(args[0], args[1], commodity, dt, tstamp)
     update.message.reply_document(document=BytesIO(str.encode(message)),
         filename=fname,
-        caption="Please PGP sign the transaction file or text and send to the /txsub command:\n\n"
+        caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
     )
     bot.send_message(chat_id=update.message.chat_id, text=message)
     return
@@ -203,8 +203,8 @@ def application(bot, update, args):
 
 
 def signed_tx(bot, update):
-    if update.message.text != '/txsub':
-        sigtext = update.message.text[7:].replace('—', '--')
+    if update.message.text != '/sub':
+        sigtext = update.message.text[5:].replace('—', '--')
         name = get_signer_name(sigtext)
         if name is None:
             update.message.reply_text('Invalid or untrusted signature.')
@@ -257,6 +257,11 @@ def signed_tx(bot, update):
     return
 
 
+def guld_status(bot, update):
+    update.message.reply_text(get_guld_overview())
+    return
+
+
 def get_addr(bot, update, args):
     commodity = args[0]
     if commodity not in ('BTC', 'DASH'):
@@ -276,17 +281,26 @@ def main():
     updater = Updater(config['telegram']['bottoken'])
 
     dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", start))
+    dp.add_handler(CommandHandler("start", halp))
+    dp.add_handler(CommandHandler("help", halp))
     dp.add_handler(CommandHandler("price", price, pass_args=True))
-    dp.add_handler(CommandHandler("bal", balance, pass_args=True))
-    dp.add_handler(CommandHandler("asl", assets_liabilites, pass_args=True))
+    dp.add_handler(CommandHandler("bal", assets_liabilites, pass_args=True))
+    # dp.add_handler(CommandHandler("asl", assets_liabilites, pass_args=True))
     dp.add_handler(CommandHandler("register", register, pass_args=True))
     dp.add_handler(CommandHandler("send", transfer, pass_args=True))
     dp.add_handler(CommandHandler("grant", grant, pass_args=True))
     dp.add_handler(CommandHandler("sub", signed_tx))
+    dp.add_handler(CommandHandler("stat", guld_status))
     dp.add_handler(CommandHandler("addr", get_addr, pass_args=True))
     dp.add_handler(CommandHandler("apply", application, pass_args=True))
+
+    dp.add_handler(CommandHandler("ayuda", ayuda))
+    dp.add_handler(CommandHandler("precio", price, pass_args=True))
+    dp.add_handler(CommandHandler("registro", register, pass_args=True))
+    dp.add_handler(CommandHandler("env", transfer, pass_args=True))
+    dp.add_handler(CommandHandler("ent", signed_tx))
+    dp.add_handler(CommandHandler("dir", get_addr, pass_args=True))
+    dp.add_handler(CommandHandler("aplica", application, pass_args=True))
 
     # register_handler = ConversationHandler(
     #     entry_points=[CommandHandler('register', register, pass_args=True)],
