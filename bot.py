@@ -228,10 +228,12 @@ def application(bot, update, args):
 def signed_tx(bot, update):
     if update.message.text != '/sub':
         sigtext = update.message.text[5:].replace('—', '--')
-        name = get_signer_name(sigtext)
-        if name is None:
+        fpr = get_signer_fpr(sigtext)
+        if fpr is None:
             update.message.reply_text('Invalid or untrusted signature.')
         else:
+            name = get_name_by_pgp_fpr(fpr)
+            trust = get_pgp_trust(fpr)
             rawtx = strip_pgp_sig(sigtext)
             txtype = get_transaction_type(rawtx)
             tstamp = get_transaction_timestamp(rawtx)
@@ -256,7 +258,7 @@ def signed_tx(bot, update):
             if os.path.exists(fpath):
                 update.message.reply_text('Message already known.')
                 return
-            elif txtype == 'transfer':
+            elif trust >= 1 and txtype == 'transfer':
                 if not re.search(' *%s:Assets *%s %s*' % (name, amount, commodity), rawtx) or float(amount) >= 0:
                     update.message.reply_text('Cannot sign for account that is not yours.')
                     return
@@ -267,13 +269,13 @@ def signed_tx(bot, update):
                         update.message.reply_text('Cannot create transction that would result in negative net worth.')
                         return
                 write_tx_files()
-            elif txtype == 'register individual':
+            elif trust >= 0 and txtype == 'register individual':
                 bal = get_guld_sub_bals(name)
                 if 'guld:Income:register:individual' in bal:
                     update.message.reply_text('ERROR: Name already registered.')
                 else:
                     write_tx_files()
-            elif txtype == 'grant':
+            elif trust >= 2 and txtype == 'grant':
                 if (float(amount) < 10 and name in ['fdreyfus', 'isysd', 'cz', 'juankong', 'goldchamp'] or
                     name in ['isysd', 'cz']):
                     write_tx_files()
