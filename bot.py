@@ -37,14 +37,16 @@ def halp(bot, update):
         '    - Account balance with optional unit\n'
         '/addr <asset> <username>\n'  # TODO group or device
         '    - Get address from me. Deposits converted to GULD at market rate. (max 50)\n'
-        '/register individual <name>\n'  # TODO group or device
-        '    - Register as an individual.\n'
+        '/register individual <name> [qty]\n'  # TODO group or device
+        '    - Register an individual, device, or group with quantity.\n'
         '/send <from> <to> <amount> [commodity]\n'
         '    - Transfer to another account. Default unit is GULD.\n'
         '/grant <contributor> <amount> [commodity]\n'
         '    - Grant for contributors. Default unit is GULD.\n'
         '/sub <signed_tx>\n'
         '    - Submit a signed transaction\n'
+        '/stat\n'
+        '    - Get Guld supply (-Liabilities) and Equity information.\n'
         '/apply <username> <pgp-pub-key>\n'  # TODO group or device
         '    - Apply for an account with a username and PGP key (RSA 2048+ bit)\n'
         )
@@ -63,7 +65,7 @@ def ayuda(bot, update):
         '/dir <activo> <nombre> \n' # TODO grupo o dispositivo
         '    - Obtener dirección de mí. Depósitos convertidos a GULD a tasa de mercado. (max 50) \n'
         '/registro individual <nombre> \n' # TODO grupo o dispositivo
-        '    - Registrarse como individuo. \n'
+        '    - Registrarse como individuo, maquina, o grupo con cantidad. \n'
         '/env <desde> <a> <cantidad> [unidad] \n'
         '    - Transferir a otra cuenta. La unidad predeterminada es GULD. \n'
         '/grant <contribuidor> <cantidad> [unidad] \n'
@@ -72,6 +74,8 @@ def ayuda(bot, update):
         '    - Enviar una transacción firmada \n'
         '/aplica <username> <pgp-pub-key> \n' # TODO grupo o dispositivo
         '    - Solicite una cuenta con un nombre de usuario y clave PGP (RSA 2048+ bit) \n'
+        '/stat\n'
+        '    - Obtener Guld suministro (-Liabilidades) e información de Equity.\n'
         '/ayuda\n' # TODO grupo o dispositivo
         '    - Documentación de ayuda detallada en un mensaje.\n'
         )
@@ -101,6 +105,8 @@ def assets_liabilites(bot, update, args):
         else:
             bals = get_assets_liabs(username)
         bals = (bals[:500] + '..') if len(bals) > 500 else bals
+        if bals == '' or len(bals) == 0:
+            bals = '0'
         update.message.reply_text(bals)
     return
 
@@ -116,6 +122,8 @@ def balance(bot, update, args):
         else:
             bals = get_balance(username)
         bals = (bals[:500] + '..') if len(bals) > 500 else bals
+        if bals == '' or len(bals) == 0:
+            bals = '0'
         update.message.reply_text(bals)
     return
 
@@ -124,7 +132,22 @@ def register(bot, update, args):
     dt, tstamp = get_time_date_stamp()
     fname = '%s.dat' % tstamp
     utype = args[0]
-    message = gen_register_individual(args[1], dt, tstamp)
+    if utype == 'individual':
+        message = gen_register(args[1], 'individual', 1, dt, tstamp)
+    elif utype == 'group':
+        if len(args) == 3:
+            qty = int(args[2])
+            if qty <= 0:
+                bot.send_message(chat_id=update.message.chat_id, text="Must be positive number of registrations.")
+                return
+        else:
+            qty = 1
+        message = gen_register(args[1], 'group', qty, dt, tstamp)
+    elif utype == 'device':
+        message = gen_register(args[1], 'device', 1, dt, tstamp)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text="Unknown name type. Options are: individual, group, device")
+        return
     update.message.reply_document(document=BytesIO(str.encode(message)),
         filename=fname,
         caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
