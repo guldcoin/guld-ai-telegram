@@ -117,14 +117,17 @@ def balance(bot, update, args):
         update.message.reply_text('username is required.')
     else:
         username = str(args[0])
-        if len(args) > 1:
-            bals = get_balance(username, in_commodity=str(args[1]))
-        else:
-            bals = get_balance(username)
-        bals = (bals[:500] + '..') if len(bals) > 500 else bals
-        if bals == '' or len(bals) == 0:
-            bals = '0'
-        update.message.reply_text(bals)
+        # if username exists:
+            if len(args) > 1:
+                bals = get_balance(username, in_commodity=str(args[1]))
+            else:
+                bals = get_balance(username)
+            bals = (bals[:500] + '..') if len(bals) > 500 else bals
+            if bals == '' or len(bals) == 0:
+                bals = '0'
+            update.message.reply_text(bals)
+        # else:
+            update.message.reply_text("Username does not exist or I'm on my break.")
     return
 
 
