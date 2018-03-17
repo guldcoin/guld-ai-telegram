@@ -12,7 +12,7 @@ from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, Document)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
 # from telegram.ext.dispatcher import run_async
-from guldlib import *
+import guldlib
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -91,7 +91,7 @@ def price(bot, update, args):
     if commodity not in COMMODITIES:
         update.message.reply_text('Invalid commodity. Options are: %s' % ", ".join(COMMODITIES))
     else:
-        update.message.reply_text("%s = $%s" % (commodity, get_price(commodity)))
+        update.message.reply_text("%s = $%s" % (commodity, guldlib.get_price(commodity)))
     return
 
 
@@ -101,9 +101,9 @@ def assets_liabilites(bot, update, args):
     else:
         username = str(args[0])
         if len(args) > 1:
-            bals = get_assets_liabs(username, in_commodity=str(args[1]))
+            bals = guldlib.get_assets_liabs(username, in_commodity=str(args[1]))
         else:
-            bals = get_assets_liabs(username)
+            bals = guldlib.get_assets_liabs(username)
         bals = (bals[:500] + '..') if len(bals) > 500 else bals
         if bals == '' or len(bals) == 0:
             bals = '0'
@@ -118,9 +118,9 @@ def balance(bot, update, args):
     else:
         username = str(args[0])
         if len(args) > 1:
-            bals = get_balance(username, in_commodity=str(args[1]))
+            bals = guldlib.get_balance(username, in_commodity=str(args[1]))
         else:
-            bals = get_balance(username)
+            bals = guldlib.get_balance(username)
         bals = (bals[:500] + '..') if len(bals) > 500 else bals
         if bals == '' or len(bals) == 0:
             bals = '0'
@@ -129,11 +129,11 @@ def balance(bot, update, args):
 
 
 def register(bot, update, args):
-    dt, tstamp = get_time_date_stamp()
+    dt, tstamp = guldlib.get_time_date_stamp()
     fname = '%s.dat' % tstamp
     utype = args[0]
     if utype == 'individual':
-        message = gen_register(args[1], 'individual', 1, dt, tstamp)
+        message = guldlib.gen_register(args[1], 'individual', 1, dt, tstamp)
     elif utype == 'group':
         if len(args) == 3:
             qty = int(args[2])
@@ -142,9 +142,9 @@ def register(bot, update, args):
                 return
         else:
             qty = 1
-        message = gen_register(args[1], 'group', qty, dt, tstamp)
+        message = guldlib.gen_register(args[1], 'group', qty, dt, tstamp)
     elif utype == 'device':
-        message = gen_register(args[1], 'device', 1, dt, tstamp)
+        message = guldlib.gen_register(args[1], 'device', 1, dt, tstamp)
     else:
         bot.send_message(chat_id=update.message.chat_id, text="Unknown name type. Options are: individual, group, device")
         return
@@ -157,13 +157,13 @@ def register(bot, update, args):
 
 
 def transfer(bot, update, args):
-    dt, tstamp = get_time_date_stamp()
+    dt, tstamp = guldlib.get_time_date_stamp()
     fname = '%s.dat' % tstamp
     if len(args) > 3:
         commodity = args[3]
     else:
         commodity = 'GULD'
-    message = gen_transfer(args[0], args[1], args[2], commodity, dt, tstamp)
+    message = guldlib.gen_transfer(args[0], args[1], args[2], commodity, dt, tstamp)
     update.message.reply_document(document=BytesIO(str.encode(message)),
         filename=fname,
         caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
@@ -173,7 +173,7 @@ def transfer(bot, update, args):
 
 
 def grant(bot, update, args):
-    dt, tstamp = get_time_date_stamp()
+    dt, tstamp = guldlib.get_time_date_stamp()
     fname = '%s.dat' % tstamp
     amount = args[1]
     if len(args) > 2:
@@ -181,7 +181,7 @@ def grant(bot, update, args):
     else:
         commodity = 'GULD'
 
-    message = gen_grant(args[0], args[1], commodity, dt, tstamp)
+    message = guldlib.gen_grant(args[0], args[1], commodity, dt, tstamp)
     update.message.reply_document(document=BytesIO(str.encode(message)),
         filename=fname,
         caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
@@ -218,7 +218,7 @@ def application(bot, update, args):
             else:
                 update.message.reply_text('Error reserving name. Try another one.')
             # return
-        fpr = import_pgp_key(name, pubkey)
+        fpr = guldlib.import_pgp_key(name, pubkey)
         if fpr is not None:
             update.message.reply_text('Application submitted, pending manual approval.\n\nname:        %s\nfingerprint: %s' % (name, fpr))
         else:
@@ -228,19 +228,19 @@ def application(bot, update, args):
 def signed_tx(bot, update):
     if update.message.text != '/sub':
         sigtext = update.message.text[5:].replace('—', '--')
-        fpr = get_signer_fpr(sigtext)
+        fpr = guldlib.get_signer_fpr(sigtext)
         if fpr is None:
             update.message.reply_text('Invalid or untrusted signature.')
         else:
-            name = get_name_by_pgp_fpr(fpr)
-            trust = get_pgp_trust(fpr)
-            rawtx = strip_pgp_sig(sigtext)
-            txtype = get_transaction_type(rawtx)
-            tstamp = get_transaction_timestamp(rawtx)
+            name = guldlib.get_name_by_pgp_fpr(fpr)
+            trust = guldlib.get_pgp_trust(fpr)
+            rawtx = guldlib.strip_pgp_sig(sigtext)
+            txtype = guldlib.get_transaction_type(rawtx)
+            tstamp = guldlib.get_transaction_timestamp(rawtx)
             if txtype is None:
                 update.message.reply_text('ERROR: Unknown transaction type')
                 return
-            ac = get_transaction_amount(rawtx)
+            ac = guldlib.get_transaction_amount(rawtx)
             if ac is None:
                 update.message.reply_text('ERROR: Unknown transaction format')
                 return
@@ -263,14 +263,14 @@ def signed_tx(bot, update):
                     update.message.reply_text('Cannot sign for account that is not yours.')
                     return
                 else:
-                    asl = get_assets_liabs(name)
+                    asl = guldlib.get_assets_liabs(name)
                     aslbal = asl.strip().split('\n')[-1].strip().split(' ')[0]
                     if float(aslbal) + float(amount) < 0:
                         update.message.reply_text('Cannot create transction that would result in negative net worth.')
                         return
                 write_tx_files()
             elif trust >= 0 and txtype == 'register individual':
-                bal = get_guld_sub_bals(name)
+                bal = guldlib.get_guld_sub_bals(name)
                 if 'guld:Income:register:individual' in bal:
                     update.message.reply_text('ERROR: Name already registered.')
                 else:
@@ -283,7 +283,7 @@ def signed_tx(bot, update):
 
 
 def guld_status(bot, update):
-    update.message.reply_text(get_guld_overview())
+    update.message.reply_text(guldlib.get_guld_overview())
     return
 
 
@@ -293,7 +293,7 @@ def get_addr(bot, update, args):
         update.message.reply_text('only BTC and DASH are supported at the moment')
     else:
         counterparty = args[1]
-        address = getAddresses(counterparty, 'isysd', commodity)[-1]
+        address = guldlib.getAddresses(counterparty, 'isysd', commodity)[-1]
         update.message.reply_text(address)
     return
 
