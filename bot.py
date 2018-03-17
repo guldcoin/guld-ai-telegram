@@ -12,7 +12,11 @@ from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, Document)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
 # from telegram.ext.dispatcher import run_async
-from guldlib import *
+from guldlib import (get_price, get_guld_sub_bals, get_guld_overview, get_assets_liabs, 
+                     get_balance, import_pgp_key, gen_register, get_time_date_stamp, 
+                     gen_grant, get_signer_fpr, get_name_by_pgp_fpr, get_pgp_trust, 
+                     get_transaction_type, get_transaction_timestamp, get_transaction_amount, 
+                     strip_pgp_sig, getAddresses)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
