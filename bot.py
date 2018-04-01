@@ -16,7 +16,8 @@ from guldlib import *
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-COMMODITIES = json.loads(config['telegram']['COMMODITIES'])
+COMMODITIES = json.loads(config['telegram']['commodities'])
+OWNER = config['telegram']['owner']
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -99,9 +100,9 @@ def assets_liabilites(bot, update, args):
     if len(args) == 0:
         update.message.reply_text('username is required.')
     else:
-        username = str(args[0])
+        username = str(args[0]).lower()
         if len(args) > 1:
-            bals = get_assets_liabs(username, in_commodity=str(args[1]))
+            bals = get_assets_liabs(username, in_commodity=str(args[1]).upper())
         else:
             bals = get_assets_liabs(username)
         bals = (bals[:500] + '..') if len(bals) > 500 else bals
@@ -111,14 +112,13 @@ def assets_liabilites(bot, update, args):
     return
 
 
-
 def balance(bot, update, args):
     if len(args) == 0:
         update.message.reply_text('username is required.')
     else:
-        username = str(args[0])
+        username = str(args[0]).lower()
         if len(args) > 1:
-            bals = get_balance(username, in_commodity=str(args[1]))
+            bals = get_balance(username, in_commodity=str(args[1]).upper())
         else:
             bals = get_balance(username)
         bals = (bals[:500] + '..') if len(bals) > 500 else bals
@@ -132,8 +132,9 @@ def register(bot, update, args):
     dt, tstamp = get_time_date_stamp()
     fname = '%s.dat' % tstamp
     utype = args[0]
+    rname = args[1].lower()
     if utype == 'individual':
-        message = gen_register(args[1], 'individual', 1, dt, tstamp)
+        message = gen_register(rname, 'individual', 1, dt, tstamp)
     elif utype == 'group':
         if len(args) == 3:
             qty = int(args[2])
@@ -142,9 +143,9 @@ def register(bot, update, args):
                 return
         else:
             qty = 1
-        message = gen_register(args[1], 'group', qty, dt, tstamp)
+        message = gen_register(rname, 'group', qty, dt, tstamp)
     elif utype == 'device':
-        message = gen_register(args[1], 'device', 1, dt, tstamp)
+        message = gen_register(rname, 'device', 1, dt, tstamp)
     else:
         bot.send_message(chat_id=update.message.chat_id, text="Unknown name type. Options are: individual, group, device")
         return
@@ -160,10 +161,10 @@ def transfer(bot, update, args):
     dt, tstamp = get_time_date_stamp()
     fname = '%s.dat' % tstamp
     if len(args) > 3:
-        commodity = args[3]
+        commodity = args[3].upper()
     else:
         commodity = 'GULD'
-    message = gen_transfer(args[0], args[1], args[2], commodity, dt, tstamp)
+    message = gen_transfer(args[0].lower(), args[1].lower(), args[2], commodity, dt, tstamp)
     update.message.reply_document(document=BytesIO(str.encode(message)),
         filename=fname,
         caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
@@ -177,11 +178,11 @@ def grant(bot, update, args):
     fname = '%s.dat' % tstamp
     amount = args[1]
     if len(args) > 2:
-        commodity = args[2]
+        commodity = args[2].upper()
     else:
         commodity = 'GULD'
 
-    message = gen_grant(args[0], args[1], commodity, dt, tstamp)
+    message = gen_grant(args[0].lower(), amount, commodity, dt, tstamp)
     update.message.reply_document(document=BytesIO(str.encode(message)),
         filename=fname,
         caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
@@ -232,7 +233,7 @@ def signed_tx(bot, update):
         if fpr is None:
             update.message.reply_text('Invalid or untrusted signature.')
         else:
-            name = get_name_by_pgp_fpr(fpr)
+            tname = get_name_by_pgp_fpr(fpr)
             trust = get_pgp_trust(fpr)
             rawtx = strip_pgp_sig(sigtext)
             txtype = get_transaction_type(rawtx)
@@ -246,7 +247,7 @@ def signed_tx(bot, update):
                 return
             amount, commodity = ac
             fname = '%s.dat' % tstamp
-            fpath = os.path.join(GULD_HOME, 'ledger', commodity, name, fname)
+            fpath = os.path.join(GULD_HOME, 'ledger', commodity, tname, fname)
 
             def write_tx_files():
                 with open(fpath + '.asc', 'w') as sf:
@@ -259,25 +260,26 @@ def signed_tx(bot, update):
                 update.message.reply_text('Message already known.')
                 return
             elif trust >= 1 and txtype == 'transfer':
-                if not re.search(' *%s:Assets *%s %s*' % (name, amount, commodity), rawtx) or float(amount) >= 0:
+                if not re.search(' *%s:Assets *%s %s*' % (tname, amount, commodity), rawtx) or float(amount) >= 0:
                     update.message.reply_text('Cannot sign for account that is not yours.')
                     return
                 else:
-                    asl = get_assets_liabs(name)
+                    asl = get_assets_liabs(tname)
                     aslbal = asl.strip().split('\n')[-1].strip().split(' ')[0]
                     if float(aslbal) + float(amount) < 0:
                         update.message.reply_text('Cannot create transction that would result in negative net worth.')
                         return
                 write_tx_files()
             elif trust >= 0 and txtype == 'register individual':
-                bal = get_guld_sub_bals(name)
+                bal = get_guld_sub_bals(tname)
                 if 'guld:Income:register:individual' in bal:
                     update.message.reply_text('ERROR: Name already registered.')
                 else:
                     write_tx_files()
             elif trust >= 2 and txtype == 'grant':
-                if (float(amount) < 10 and name in ['fdreyfus', 'isysd', 'cz', 'juankong', 'goldchamp'] or
-                    name in ['isysd', 'cz']):
+                # TODO make this community controlled config file value
+                if (float(amount) < 10 and tname in ['fdreyfus', 'isysd', 'cz', 'juankong', 'goldchamp'] or
+                    tname in ['isysd', 'cz']):
                     write_tx_files()
     return
 
@@ -288,12 +290,12 @@ def guld_status(bot, update):
 
 
 def get_addr(bot, update, args):
-    commodity = args[0]
+    commodity = args[0].upper()
     if commodity not in ('BTC', 'DASH'):
         update.message.reply_text('only BTC and DASH are supported at the moment')
     else:
-        counterparty = args[1]
-        address = getAddresses(counterparty, 'isysd', commodity)[-1]
+        counterparty = args[1].lower()
+        address = getAddresses(counterparty, OWNER, commodity)[-1]
         update.message.reply_text(address)
     return
 
