@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 import configparser
 import json
 import logging
@@ -229,9 +229,6 @@ def application(bot, update, args):
 def signed_tx(bot, update):
     if update.message.text != '/sub':
         sigtext = update.message.text[5:].replace('—', '--')
-        if not is_valid_ledger(sigtext):
-            update.message.reply_text('Invalid transaction.')
-            return
         fpr = get_signer_fpr(sigtext)
         if fpr is None:
             update.message.reply_text('Invalid or untrusted signature.')
@@ -239,6 +236,10 @@ def signed_tx(bot, update):
             tname = get_name_by_pgp_fpr(fpr)
             trust = get_pgp_trust(fpr)
             rawtx = strip_pgp_sig(sigtext)
+            isvalid = is_valid_ledger(rawtx)
+            if not isvalid:
+                update.message.reply_text('Invalid transaction.')
+                return
             txtype = get_transaction_type(rawtx)
             tstamp = get_transaction_timestamp(rawtx)
             if txtype is None:
