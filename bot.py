@@ -38,8 +38,8 @@ def halp(bot, update):
         '    - Account balance with optional unit\n'
         '/addr <asset> <username>\n'  # TODO group or device
         '    - Get address from me. Deposits converted to GULD at market rate. (max 50)\n'
-        '/register individual <name> [qty]\n'  # TODO group or device
-        '    - Register an individual, device, or group with quantity.\n'
+        '/register individual <name> [qty] [payer]\n'  # TODO group or device
+        '    - Register an individual, device, or group with optional quantity and payer.\n'
         '/send <from> <to> <amount> [commodity]\n'
         '    - Transfer to another account. Default unit is GULD.\n'
         '/grant <contributor> <amount> [commodity]\n'
@@ -65,8 +65,8 @@ def ayuda(bot, update):
         '    - Saldo de cuenta con unidad opcional \n'
         '/dir <activo> <nombre> \n' # TODO grupo o dispositivo
         '    - Obtener dirección de mí. Depósitos convertidos a GULD a tasa de mercado. (max 50) \n'
-        '/registro individual <nombre> \n' # TODO grupo o dispositivo
-        '    - Registrarse como individuo, maquina, o grupo con cantidad. \n'
+        '/registro individual <nombre> [cant] [pagador]\n' # TODO grupo o dispositivo
+        '    - Registrarse como individuo, maquina, o grupo con cantidad y pagador. \n'
         '/env <desde> <a> <cantidad> [unidad] \n'
         '    - Transferir a otra cuenta. La unidad predeterminada es GULD. \n'
         '/grant <contribuidor> <cantidad> [unidad] \n'
@@ -136,14 +136,18 @@ def register(bot, update, args):
     if utype == 'individual':
         message = gen_register(rname, 'individual', 1, dt, tstamp)
     elif utype == 'group':
-        if len(args) == 3:
+        if len(args) >= 3:
+            if len(args) >= 4:
+                payer = args[3].lower()
+            else:
+                payer = rname
             qty = int(args[2])
             if qty <= 0:
                 bot.send_message(chat_id=update.message.chat_id, text="Must be positive number of registrations.")
                 return
         else:
             qty = 1
-        message = gen_register(rname, 'group', qty, dt, tstamp)
+        message = gen_register(rname, 'group', qty, dt, tstamp, payer)
     elif utype == 'device':
         message = gen_register(rname, 'device', 1, dt, tstamp)
     else:
@@ -276,7 +280,13 @@ def signed_tx(bot, update):
                 write_tx_files()
             elif trust >= 0 and txtype == 'register individual':
                 bal = get_guld_sub_bals(tname)
-                if 'guld:Income:register:individual' in bal:
+                if 'guld:Income:register' in bal:
+                    update.message.reply_text('ERROR: Name already registered.')
+                else:
+                    write_tx_files()
+            elif trust >= 2 and txtype == 'register group':
+                bal = get_guld_sub_bals(tname)
+                if 'guld:Income:register' in bal:
                     update.message.reply_text('ERROR: Name already registered.')
                 else:
                     write_tx_files()
@@ -288,8 +298,11 @@ def signed_tx(bot, update):
     return
 
 
-def guld_status(bot, update):
-    update.message.reply_text(get_guld_overview())
+def guld_status(bot, update, args):
+    if len(args) == 0:
+        update.message.reply_text(get_guld_overview())
+    else:
+        update.message.reply_text(get_guld_member_overview(args[0].lower()))
     return
 
 
@@ -321,7 +334,7 @@ def main():
     dp.add_handler(CommandHandler("send", transfer, pass_args=True))
     dp.add_handler(CommandHandler("grant", grant, pass_args=True))
     dp.add_handler(CommandHandler("sub", signed_tx))
-    dp.add_handler(CommandHandler("stat", guld_status))
+    dp.add_handler(CommandHandler("stat", guld_status, pass_args=True))
     dp.add_handler(CommandHandler("addr", get_addr, pass_args=True))
     dp.add_handler(CommandHandler("apply", application, pass_args=True))
 
