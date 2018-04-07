@@ -12,11 +12,7 @@ from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, Document)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
 # from telegram.ext.dispatcher import run_async
-from guldlib import (get_price, get_guld_sub_bals, get_guld_overview, get_assets_liabs,
-                     get_balance, import_pgp_key, gen_register, get_time_date_stamp,
-                     gen_grant, get_name_by_pgp_fpr, get_pgp_trust,
-                     get_transaction_type, get_transaction_timestamp, get_transaction_amount,
-                     strip_pgp_sig, getAddresses)
+from guldlib import *
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -233,6 +229,9 @@ def application(bot, update, args):
 def signed_tx(bot, update):
     if update.message.text != '/sub':
         sigtext = update.message.text[5:].replace('—', '--')
+        if not is_valid_ledger(sigtext):
+            update.message.reply_text('Invalid transaction.')
+            return
         fpr = get_signer_fpr(sigtext)
         if fpr is None:
             update.message.reply_text('Invalid or untrusted signature.')
