@@ -286,10 +286,7 @@ def signed_tx(bot, update):
                     write_tx_files()
             elif trust >= 1 and txtype == 'register group':
                 bal = get_guld_sub_bals(tname)
-                if 'guld:Income:register' in bal:
-                    update.message.reply_text('ERROR: Name already registered.')
-                else:
-                    write_tx_files()
+                write_tx_files()
             elif trust >= 2 and txtype == 'grant':
                 # TODO make this community controlled config file value
                 if (float(amount) < 10 and tname in ['fdreyfus', 'isysd', 'cz', 'juankong', 'goldchamp'] or
