@@ -46,8 +46,8 @@ def halp(bot, update):
         '    - Grant for contributors. Default unit is GULD.\n'
         '/sub <signed_tx>\n'
         '    - Submit a signed transaction\n'
-        '/stat\n'
-        '    - Get Guld supply (-Liabilities) and Equity information.\n'
+        '/stat [name]\n'
+        '    - Get Guld supply (-Liabilities) and Equity information, optional regstriction to named account.\n'
         '/apply <username> <pgp-pub-key>\n'  # TODO group or device
         '    - Apply for an account with a username and PGP key (RSA 2048+ bit)\n'
         )
@@ -75,8 +75,8 @@ def ayuda(bot, update):
         '    - Enviar una transacción firmada \n'
         '/aplica <username> <pgp-pub-key> \n' # TODO grupo o dispositivo
         '    - Solicite una cuenta con un nombre de usuario y clave PGP (RSA 2048+ bit) \n'
-        '/stat\n'
-        '    - Obtener Guld suministro (-Liabilidades) e información de Equity.\n'
+        '/stat [nombre]\n'
+        '    - Obtener Guld suministro (-Liabilidades) e información de Equity, con nombre.\n'
         '/ayuda\n' # TODO grupo o dispositivo
         '    - Documentación de ayuda detallada en un mensaje.\n'
         )
@@ -141,7 +141,7 @@ def register(bot, update, args):
                 payer = args[3].lower()
             else:
                 payer = rname
-            qty = int(args[2])
+            qty = float(args[2])
             if qty <= 0:
                 bot.send_message(chat_id=update.message.chat_id, text="Must be positive number of registrations.")
                 return
@@ -284,7 +284,7 @@ def signed_tx(bot, update):
                     update.message.reply_text('ERROR: Name already registered.')
                 else:
                     write_tx_files()
-            elif trust >= 2 and txtype == 'register group':
+            elif trust >= 1 and txtype == 'register group':
                 bal = get_guld_sub_bals(tname)
                 if 'guld:Income:register' in bal:
                     update.message.reply_text('ERROR: Name already registered.')
