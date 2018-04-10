@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import string
+import decimal
 from datetime import datetime
 from io import StringIO, BytesIO
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, Document)
@@ -141,7 +142,7 @@ def register(bot, update, args):
                 payer = args[3].lower()
             else:
                 payer = rname
-            qty = float(args[2])
+            qty = decimal.Decimal(args[2])
             if qty <= 0:
                 bot.send_message(chat_id=update.message.chat_id, text="Must be positive number of registrations.")
                 return
@@ -268,13 +269,13 @@ def signed_tx(bot, update):
                 update.message.reply_text('Message already known.')
                 return
             elif trust >= 1 and txtype == 'transfer':
-                if not re.search(' *%s:Assets *%s %s*' % (tname, amount, commodity), rawtx) or float(amount) >= 0:
+                if not re.search(' *%s:Assets *%s %s*' % (tname, amount, commodity), rawtx) or decimal.Decimal(amount) >= 0:
                     update.message.reply_text('Cannot sign for account that is not yours.')
                     return
                 else:
                     asl = get_assets_liabs(tname)
                     aslbal = asl.strip().split('\n')[-1].strip().split(' ')[0]
-                    if float(aslbal) + float(amount) < 0:
+                    if decimal.Decimal(aslbal) + decimal.Decimal(amount) < 0:
                         update.message.reply_text('Cannot create transction that would result in negative net worth.')
                         return
                 write_tx_files()
@@ -289,7 +290,7 @@ def signed_tx(bot, update):
                 write_tx_files()
             elif trust >= 2 and txtype == 'grant':
                 # TODO make this community controlled config file value
-                if (float(amount) < 10 and tname in ['fdreyfus', 'isysd', 'cz', 'juankong', 'goldchamp'] or
+                if (decimal.Decimal(amount) < 10 and tname in ['fdreyfus', 'isysd', 'cz', 'juankong', 'goldchamp'] or
                     tname in ['isysd', 'cz']):
                     write_tx_files()
     return
