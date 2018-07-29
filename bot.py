@@ -19,9 +19,9 @@ config.read('config.ini')
 COMMODITIES = json.loads(config['telegram']['commodities'])
 OWNER = config['telegram']['owner']
 ADDRESSES = {
-   'BTC': config['btc'],
-   'ETH': config['eth'],
-   'DASH': config['dash']
+   'BTC': config['telegram']['btc'],
+   'ETH': config['telegram']['eth'],
+   'DASH': config['telegram']['dash']
 }
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -189,10 +189,10 @@ def transfer(bot, update, args):
 def eguld(bot, update, args):
     dt, tstamp = get_time_date_stamp()
     fname = '%s.dat' % tstamp
-    if len(args) > 3:
-        addr = args[3]
+    if len(args) >= 3:
+        addr = args[2]
         message = '{1} * Mizim ERC20 GULD Purchase\n'
-        '    ; TEMPLATE: ledger/trade/INTERNATIONAL_SALE_GOODS_U1000.md
+        '    ; TEMPLATE: ledger/trade/INTERNATIONAL_SALE_GOODS_U1000.md'
         '    ; START_TIME: {2}\n'
         '    ; ADDRESS: {3}\n'
         '    ; PARTY2_NAME: {0}\n'
