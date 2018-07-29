@@ -18,6 +18,11 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 COMMODITIES = json.loads(config['telegram']['commodities'])
 OWNER = config['telegram']['owner']
+ADDRESSES = {
+   'BTC': config['btc'],
+   'ETH': config['eth'],
+   'DASH': config['dash']
+}
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -36,14 +41,16 @@ def halp(bot, update):
         '    - Price of a unit\n'
         '/bal <account> [unit]\n'
         '    - Account balance with optional unit\n'
-        '/addr <asset> <username>\n'  # TODO group or device
-        '    - Get address from me. Deposits converted to GULD at market rate. (max 50)\n'
+        '/addr <asset>\n'  # TODO group or device
+        '    - Get address from me. Deposits converted to GULD at market rate at time of first block confirmation. Proof of Address required to redeem.\n'
         '/register individual <name> [qty] [payer]\n'  # TODO group or device
         '    - Register an individual, device, or group with optional quantity and payer.\n'
         '/send <from> <to> <amount> [commodity]\n'
         '    - Transfer to another account. Default unit is GULD.\n'
         '/grant <contributor> <amount> [commodity]\n'
         '    - Grant for contributors. Default unit is GULD.\n'
+        '/erc20 <username> <amount> <address>\n'  # TODO group or device
+        '    - Convert GULD to Ethereum ERC20 GULD. (0.1 GULD fee) (max 999)\n'
         '/sub <signed_tx>\n'
         '    - Submit a signed transaction\n'
         '/stat [name]\n'
@@ -71,6 +78,8 @@ def ayuda(bot, update):
         '    - Transferir a otra cuenta. La unidad predeterminada es GULD. \n'
         '/grant <contribuidor> <cantidad> [unidad] \n'
         '    - Grant para contribuyentes. La unidad predeterminada es GULD. \n'
+        '/erc20 <nombre> <cant> <dirección>\n'  # TODO group or device
+        '    - Cambiar GULD para Ethereum ERC20 GULD. (0.1 GULD fee) (max 999)\n'
         '/ent <signed_tx> \n'
         '    - Enviar una transacción firmada \n'
         '/aplica <username> <pgp-pub-key> \n' # TODO grupo o dispositivo
@@ -175,6 +184,32 @@ def transfer(bot, update, args):
     )
     bot.send_message(chat_id=update.message.chat_id, text=message)
     return
+
+
+def eguld(bot, update, args):
+    dt, tstamp = get_time_date_stamp()
+    fname = '%s.dat' % tstamp
+    if len(args) > 3:
+        addr = args[3]
+        message = '{1} * Mizim ERC20 GULD Purchase\n'
+        '    ; TEMPLATE: ledger/trade/INTERNATIONAL_SALE_GOODS_U1000.md
+        '    ; START_TIME: {2}\n'
+        '    ; ADDRESS: {3}\n'
+        '    ; PARTY2_NAME: {0}\n'
+        '    ; OFFER: mizim/1532897505.dat\n'
+        '    ; PRICE_TOTAL: {5}\n'
+        '    ; PARTY2_ADDRESS: {3}\n'
+        '    {0}:Assets   -{5} GULD\n'
+        '    {0}:Expenses   {5} GULD\n'
+        '    mizim:Liabilities:EGULD:{0}   {4} GULD\n'
+        '    mizim:Income:EGULD   -{5} GULD\n\n'.format(args[0].lower(), dt, tstamp, args[2], args[1], float(args[1]) + 0.1)
+        update.message.reply_document(document=BytesIO(str.encode(message)),
+            filename=fname,
+            caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
+        )
+        bot.send_message(chat_id=update.message.chat_id, text=message)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text="ERC20 capable Ethereum address is required.")
 
 
 def grant(bot, update, args):
@@ -305,11 +340,10 @@ def guld_status(bot, update, args):
 
 def get_addr(bot, update, args):
     commodity = args[0].upper()
-    if commodity not in ('BTC', 'DASH'):
-        update.message.reply_text('only BTC and DASH are supported at the moment')
+    if commodity not in ('BTC', 'DASH', 'ETH'):
+        update.message.reply_text('only BTC ETH and DASH are supported at the moment')
     else:
-        counterparty = args[1].lower()
-        address = getAddresses(counterparty, OWNER, commodity)[-1]
+        address = ADDRESSES[commodity]
         update.message.reply_text(address)
     return
 
@@ -333,6 +367,7 @@ def main():
     dp.add_handler(CommandHandler("sub", signed_tx))
     dp.add_handler(CommandHandler("stat", guld_status, pass_args=True))
     dp.add_handler(CommandHandler("addr", get_addr, pass_args=True))
+    dp.add_handler(CommandHandler("erc20", eguld, pass_args=True))
     dp.add_handler(CommandHandler("apply", application, pass_args=True))
 
     dp.add_handler(CommandHandler("ayuda", ayuda))
