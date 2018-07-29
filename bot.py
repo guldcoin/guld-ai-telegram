@@ -191,7 +191,7 @@ def eguld(bot, update, args):
     fname = '%s.dat' % tstamp
     if len(args) >= 3:
         addr = args[2]
-        message = '{1} * Mizim ERC20 GULD Purchase\n'
+        message = ('{1} * Mizim ERC20 GULD Purchase\n'
         '    ; TEMPLATE: ledger/trade/INTERNATIONAL_SALE_GOODS_U1000.md'
         '    ; START_TIME: {2}\n'
         '    ; ADDRESS: {3}\n'
@@ -202,7 +202,7 @@ def eguld(bot, update, args):
         '    {0}:Assets   -{5} GULD\n'
         '    {0}:Expenses   {5} GULD\n'
         '    mizim:Liabilities:EGULD:{0}   {4} GULD\n'
-        '    mizim:Income:EGULD   -{5} GULD\n\n'.format(args[0].lower(), dt, tstamp, args[2], args[1], float(args[1]) + 0.1)
+        '    mizim:Income:EGULD   -{5} GULD\n\n'.format(args[0].lower(), dt, tstamp, args[2], args[1], float(args[1]) + 0.1))
         update.message.reply_document(document=BytesIO(str.encode(message)),
             filename=fname,
             caption="Please PGP sign the transaction file or text and send to the /sub command:\n\n"
