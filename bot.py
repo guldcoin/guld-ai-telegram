@@ -324,7 +324,7 @@ def signed_tx(bot, update):
                 write_tx_files()
             elif trust >= 2 and txtype == 'grant':
                 # TODO make this community controlled config file value
-                if (float(amount) < 10 and tname in ['fdreyfus', 'isysd', 'cz', 'juankong', 'goldchamp'] or
+                if (float(amount) < 10 and tname in ['fdreyfus', 'isysd', 'cz', 'goldchamp'] or
                     tname in ['isysd', 'cz']):
                     write_tx_files()
     return
